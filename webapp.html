@@ -1,23 +1,506 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Jimmy Lathen - Web App</title>
-    <link rel="stylesheet" href="css/scratch.css" />
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Jimmy Lathen - Flick Field Goal</title>
+
+<!-- Everything for this app (styles, markup, and script) intentionally lives
+     in this one file, per the project requirement to keep the AI-collaboration
+     web app on a single page. -->
+
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+
+<style>
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: #0b0e14;
+    color: #e7ecf2;
+    font-family: "Press Start 2P", monospace;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1.5rem 1rem 3rem;
+  }
+
+  .topbar {
+    width: 100%;
+    max-width: 420px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.55rem;
+    margin-bottom: 1rem;
+  }
+
+  .topbar a {
+    color: #c9a36a;
+    text-decoration: none;
+  }
+
+  .topbar a:hover {
+    color: #f1e3c2;
+  }
+
+  h1 {
+    font-size: 1.1rem;
+    text-align: center;
+    color: #f1e3c2;
+    margin: 0 0 0.25rem;
+    letter-spacing: 1px;
+  }
+
+  .tagline {
+    font-size: 0.55rem;
+    color: #8492a6;
+    margin-bottom: 1rem;
+    text-align: center;
+  }
+
+  #gameWrap {
+    position: relative;
+    width: 320px;
+  }
+
+  canvas {
+    display: block;
+    background: #1c5d3a;
+    border: 4px solid #3a4a63;
+    image-rendering: pixelated;
+    touch-action: none;
+    cursor: pointer;
+  }
+
+  #message {
+    position: absolute;
+    top: 40%;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 1rem;
+    text-shadow: 2px 2px 0 #000;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  #message.show { opacity: 1; }
+  #message.good { color: #6fdc6f; }
+  #message.bad { color: #ff6b6b; }
+
+  #hud {
+    width: 320px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    font-size: 0.5rem;
+  }
+
+  .stat {
+    background: #15233f;
+    border: 2px solid #29456b;
+    border-radius: 4px;
+    padding: 0.5rem 0.25rem;
+    text-align: center;
+  }
+
+  .stat span.label {
+    display: block;
+    color: #8492a6;
+    margin-bottom: 0.35rem;
+  }
+
+  .stat span.value {
+    color: #f1e3c2;
+    font-size: 0.7rem;
+  }
+
+  #restartBtn {
+    margin-top: 1rem;
+    font-family: "Press Start 2P", monospace;
+    font-size: 0.6rem;
+    background: #c9a36a;
+    color: #0b0e14;
+    border: none;
+    padding: 0.75rem 1.25rem;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  #restartBtn:hover {
+    background: #f1e3c2;
+  }
+
+  .instructions {
+    max-width: 340px;
+    font-size: 0.55rem;
+    line-height: 1.8;
+    color: #8492a6;
+    text-align: center;
+    margin-top: 1.25rem;
+  }
+</style>
 </head>
 <body>
-    <nav class="scratch-nav">
-        <a class="brand" href="scratch.html">Football &amp; Me</a>
-        <div class="links">
-            <a href="scratch.html">Back to Scratch Page</a>
-            <a href="index.html">Professional Site</a>
-        </div>
-    </nav>
 
-    <div class="page-wrapper">
-        <h2 class="section-heading">Web App Coming Soon</h2>
-        <p>This page is a placeholder. The actual AI-collaboration web app will be built here next.</p>
-    </div>
+  <div class="topbar">
+    <a href="scratch.html">&larr; Back to Scratch Page</a>
+    <a href="index.html">Professional Site</a>
+  </div>
+
+  <h1>FLICK FIELD GOAL</h1>
+  <p class="tagline">An AI-assisted mini-game by Jimmy Lathen</p>
+
+  <div id="gameWrap">
+    <canvas id="game" width="320" height="480"></canvas>
+    <div id="message"></div>
+  </div>
+
+  <div id="hud">
+    <div class="stat"><span class="label">DISTANCE</span><span class="value" id="distanceStat">20 YD</span></div>
+    <div class="stat"><span class="label">WIND</span><span class="value" id="windStat">CALM</span></div>
+    <div class="stat"><span class="label">SCORE</span><span class="value" id="scoreStat">0</span></div>
+    <div class="stat"><span class="label">STREAK</span><span class="value" id="streakStat">0</span></div>
+    <div class="stat"><span class="label">BEST</span><span class="value" id="bestStat">0</span></div>
+    <div class="stat"><span class="label">ATTEMPTS</span><span class="value" id="attemptsStat">0</span></div>
+  </div>
+
+  <button id="restartBtn">Line It Up</button>
+
+  <p class="instructions">
+    Press and hold on the football, drag downward to load power, then flick
+    upward and release to kick. Drag left or right while flicking to curve
+    the ball. Watch the wind &mdash; it'll push your kick off-line the longer
+    it's in the air. Each make moves you back 5 yards.
+  </p>
+
+<script>
+(function () {
+  "use strict";
+
+  var canvas = document.getElementById("game");
+  var ctx = canvas.getContext("2d");
+  ctx.imageSmoothingEnabled = false;
+
+  var W = canvas.width;   // 320
+  var H = canvas.height;  // 480
+
+  var groundY = H - 70;
+  var goalPlaneY = 60;     // where the posts are drawn, visually
+  var ballStartX = W / 2;
+
+  var GRAVITY = 26;          // world units / s^2
+  var MIN_DRAG = 12;         // px, ignore tiny accidental taps
+  var MAX_DRAG = 150;        // px, drag distance that maps to full power
+  var UPRIGHT_HALF_WIDTH = 7.5; // world units, half the gap between posts
+  var CROSSBAR_HEIGHT = 10;     // world units, min height needed at the goal plane
+
+  var state = {
+    phase: "ready",       // ready | aiming | flying | result
+    distance: 20,          // yards to the goal plane this attempt
+    wind: 0,                // world units/s^2 lateral accel from wind
+    score: 0,
+    streak: 0,
+    best: Number(localStorage.getItem("flickFieldGoalBest") || 0),
+    attempts: 0,
+    ball: { x: ballStartX, y: groundY },
+    t: 0,
+    forwardSpeed: 0,
+    vy0: 0,
+    vz0: 0,
+    targetT: 0
+  };
+
+  var drag = { active: false, startX: 0, startY: 0, curX: 0, curY: 0 };
+
+  function newAttempt(keepDistance) {
+    state.phase = "ready";
+    if (!keepDistance) {
+      state.distance = 20 + Math.min(state.streak, 6) * 5;
+    }
+    state.wind = (Math.random() * 2 - 1) * 14; // -14..14
+    state.ball.x = ballStartX;
+    state.ball.y = groundY;
+    state.t = 0;
+    updateHud();
+    hideMessage();
+  }
+
+  function updateHud() {
+    document.getElementById("distanceStat").textContent = state.distance + " YD";
+    var windLabel = "CALM";
+    if (state.wind > 4) windLabel = "→ " + Math.round(state.wind);
+    else if (state.wind < -4) windLabel = "← " + Math.round(-state.wind);
+    document.getElementById("windStat").textContent = windLabel;
+    document.getElementById("scoreStat").textContent = state.score;
+    document.getElementById("streakStat").textContent = state.streak;
+    document.getElementById("bestStat").textContent = state.best;
+    document.getElementById("attemptsStat").textContent = state.attempts;
+  }
+
+  function showMessage(text, good) {
+    var el = document.getElementById("message");
+    el.textContent = text;
+    el.className = "show " + (good ? "good" : "bad");
+  }
+
+  function hideMessage() {
+    var el = document.getElementById("message");
+    el.className = "";
+  }
+
+  // ---- Input handling: press the ball, drag, release to flick ----
+
+  function pointerPos(e) {
+    var rect = canvas.getBoundingClientRect();
+    var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    var clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    return {
+      x: (clientX - rect.left) * (W / rect.width),
+      y: (clientY - rect.top) * (H / rect.height)
+    };
+  }
+
+  function onDown(e) {
+    if (state.phase !== "ready") return;
+    var p = pointerPos(e);
+    drag.active = true;
+    drag.startX = p.x;
+    drag.startY = p.y;
+    drag.curX = p.x;
+    drag.curY = p.y;
+    state.phase = "aiming";
+    e.preventDefault();
+  }
+
+  function onMove(e) {
+    if (!drag.active) return;
+    var p = pointerPos(e);
+    drag.curX = p.x;
+    drag.curY = p.y;
+    e.preventDefault();
+  }
+
+  function onUp(e) {
+    if (!drag.active) return;
+    drag.active = false;
+
+    var dx = drag.startX - drag.curX;       // positive = flicked rightward path curve
+    var dy = drag.curY - drag.startY;       // positive = dragged downward before release... we want upward flick power
+    // Upward flick power comes from how far the release point moved ABOVE the start point
+    var upPower = drag.startY - drag.curY;  // positive if curY is above (smaller) startY
+
+    if (upPower < MIN_DRAG) {
+      // Not enough of an upward flick - reset and let them try again
+      state.phase = "ready";
+      showMessage("FLICK UPWARD!", false);
+      setTimeout(hideMessage, 700);
+      return;
+    }
+
+    var power = Math.min(upPower, MAX_DRAG) / MAX_DRAG; // 0..1
+    var curveDx = Math.max(-MAX_DRAG, Math.min(MAX_DRAG, drag.curX - drag.startX)); // raw px, +right
+    var curveNorm = curveDx / MAX_DRAG; // -1..1
+
+    launch(power, curveNorm);
+  }
+
+  function launch(power, curveNorm) {
+    state.attempts++;
+    state.forwardSpeed = 16 + power * 34;          // yards/sec forward travel
+    state.vy0 = 9 + power * 26;                      // initial "height" velocity
+    state.vz0 = curveNorm * 22;                       // initial lateral velocity from flick curve
+    state.t = 0;
+    state.phase = "flying";
+    state.ball.x = ballStartX;
+    state.ball.y = groundY;
+    hideMessage();
+  }
+
+  function settleResult() {
+    var forwardDist = state.forwardSpeed * state.t;
+    var heightAtGoal = state.vy0 * state.t - 0.5 * GRAVITY * state.t * state.t;
+    var lateralAtGoal = state.vz0 * state.t + 0.5 * state.wind * state.t * state.t;
+
+    var reachedDistance = forwardDist >= state.distance;
+    var stillAirborne = heightAtGoal > 0;
+
+    var good = false;
+    var label = "NO GOOD";
+
+    if (!reachedDistance) {
+      label = "SHORT!";
+    } else if (!stillAirborne) {
+      label = "NO GOOD";
+    } else if (heightAtGoal < CROSSBAR_HEIGHT) {
+      label = "BLOCKED!";
+    } else if (Math.abs(lateralAtGoal) > UPRIGHT_HALF_WIDTH) {
+      label = lateralAtGoal > 0 ? "WIDE RIGHT!" : "WIDE LEFT!";
+    } else {
+      good = true;
+      label = "GOOD!!!";
+    }
+
+    if (good) {
+      state.score += 3;
+      state.streak += 1;
+      if (state.streak > state.best) {
+        state.best = state.streak;
+        localStorage.setItem("flickFieldGoalBest", String(state.best));
+      }
+    } else {
+      state.streak = 0;
+    }
+
+    state.phase = "result";
+    showMessage(label, good);
+    updateHud();
+
+    setTimeout(function () {
+      newAttempt(false);
+    }, 1300);
+  }
+
+  // ---- Drawing ----
+
+  function drawField() {
+    ctx.fillStyle = "#1c5d3a";
+    ctx.fillRect(0, 0, W, H);
+
+    // yard stripes
+    ctx.fillStyle = "#22693f";
+    for (var i = 0; i < H; i += 40) {
+      ctx.fillRect(0, i, W, 4);
+    }
+
+    // hash marks center
+    ctx.fillStyle = "rgba(255,255,255,0.4)";
+    ctx.fillRect(W / 2 - 1, goalPlaneY, 2, groundY - goalPlaneY);
+  }
+
+  function drawGoalpost() {
+    var postY = goalPlaneY;
+    var leftX = W / 2 - UPRIGHT_HALF_WIDTH * 4;
+    var rightX = W / 2 + UPRIGHT_HALF_WIDTH * 4;
+
+    ctx.strokeStyle = "#d8d8d8";
+    ctx.lineWidth = 4;
+
+    // crossbar
+    ctx.beginPath();
+    ctx.moveTo(leftX, postY);
+    ctx.lineTo(rightX, postY);
+    ctx.stroke();
+
+    // uprights
+    ctx.beginPath();
+    ctx.moveTo(leftX, postY);
+    ctx.lineTo(leftX, postY - 40);
+    ctx.moveTo(rightX, postY);
+    ctx.lineTo(rightX, postY - 40);
+    ctx.stroke();
+
+    // base post down to ground
+    ctx.beginPath();
+    ctx.moveTo(W / 2, postY);
+    ctx.lineTo(W / 2, postY + 14);
+    ctx.stroke();
+  }
+
+  function drawBall(x, y, scale) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(scale, scale);
+    ctx.fillStyle = "#7a4a2b";
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 7, 4.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#f1e3c2";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(-4, 0);
+    ctx.lineTo(4, 0);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawAimGuide() {
+    if (state.phase !== "aiming") return;
+    ctx.strokeStyle = "rgba(241,227,194,0.6)";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(drag.startX, drag.startY);
+    ctx.lineTo(drag.curX, drag.curY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  function render() {
+    drawField();
+    drawGoalpost();
+
+    if (state.phase === "flying") {
+      var forwardDist = state.forwardSpeed * state.t;
+      var progress = Math.min(1, forwardDist / state.distance);
+      var height = state.vy0 * state.t - 0.5 * GRAVITY * state.t * state.t;
+      var lateral = state.vz0 * state.t + 0.5 * state.wind * state.t * state.t;
+
+      var baseY = groundY - progress * (groundY - goalPlaneY);
+      var screenY = baseY - height * 3.2;
+      var screenX = ballStartX + lateral * 3.2;
+      var scale = 1 - progress * 0.55;
+
+      drawBall(screenX, screenY, Math.max(0.4, scale));
+    } else {
+      drawBall(state.ball.x, state.ball.y, 1);
+      drawAimGuide();
+    }
+  }
+
+  var lastTime = null;
+  function frame(now) {
+    if (lastTime === null) lastTime = now;
+    var dt = Math.min(0.032, (now - lastTime) / 1000);
+    lastTime = now;
+
+    if (state.phase === "flying") {
+      state.t += dt;
+      var forwardDist = state.forwardSpeed * state.t;
+      var height = state.vy0 * state.t - 0.5 * GRAVITY * state.t * state.t;
+
+      if (forwardDist >= state.distance || height <= 0) {
+        // clamp t to the moment it either reaches the goal plane or lands
+        settleResult();
+      }
+    }
+
+    render();
+    requestAnimationFrame(frame);
+  }
+
+  canvas.addEventListener("mousedown", onDown);
+  canvas.addEventListener("mousemove", onMove);
+  window.addEventListener("mouseup", onUp);
+  canvas.addEventListener("touchstart", onDown, { passive: false });
+  canvas.addEventListener("touchmove", onMove, { passive: false });
+  canvas.addEventListener("touchend", onUp, { passive: false });
+
+  document.getElementById("restartBtn").addEventListener("click", function () {
+    state.score = 0;
+    state.streak = 0;
+    state.attempts = 0;
+    state.distance = 20;
+    newAttempt(true);
+  });
+
+  newAttempt(true);
+  requestAnimationFrame(frame);
+})();
+</script>
+
 </body>
 </html>
