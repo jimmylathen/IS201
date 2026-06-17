@@ -152,7 +152,7 @@
   </div>
 
   <h1>FLICK FIELD GOAL</h1>
-  <p class="tagline">An AI-assisted mini-game by Jimmy Lathen</p>
+  <p class="tagline">by Jimmy Lathen</p>
 
   <div id="gameWrap">
     <canvas id="game" width="320" height="480"></canvas>
@@ -197,6 +197,9 @@
   var MAX_DRAG = 150;        // px, drag distance that maps to full power
   var UPRIGHT_HALF_WIDTH = 7.5; // world units, half the gap between posts
   var CROSSBAR_HEIGHT = 10;     // world units, min height needed at the goal plane
+  var CURVE_FACTOR = 0.5;       // how much a flick's sideways angle bends the kick over distance
+  var WIND_RANGE = 22;          // world units/s^2, max wind strength in either direction
+  var WIND_COEFFICIENT = 0.8;   // multiplier on how hard wind pushes the ball off-line
 
   var state = {
     phase: "ready",       // ready | aiming | flying | result
@@ -221,7 +224,7 @@
     if (!keepDistance) {
       state.distance = 20 + Math.min(state.streak, 6) * 5;
     }
-    state.wind = (Math.random() * 2 - 1) * 14; // -14..14
+    state.wind = (Math.random() * 2 - 1) * WIND_RANGE;
     state.ball.x = ballStartX;
     state.ball.y = groundY;
     state.t = 0;
@@ -312,7 +315,13 @@
     state.attempts++;
     state.forwardSpeed = 16 + power * 34;          // yards/sec forward travel
     state.vy0 = 9 + power * 26;                      // initial "height" velocity
-    state.vz0 = curveNorm * 22;                       // initial lateral velocity from flick curve
+    // Tie curve velocity to forward speed so the sideways DRIFT AT THE GOAL
+    // (vz0 * timeToReachGoal, and timeToReachGoal = distance / forwardSpeed)
+    // works out to curveNorm * CURVE_FACTOR * distance - i.e. how much you
+    // angled the flick sideways matters consistently, regardless of how
+    // hard you flicked it. A hard, straight flick is no longer an "always
+    // safe" shortcut.
+    state.vz0 = curveNorm * state.forwardSpeed * CURVE_FACTOR;
     state.t = 0;
     state.phase = "flying";
     state.ball.x = ballStartX;
@@ -323,7 +332,7 @@
   function settleResult() {
     var forwardDist = state.forwardSpeed * state.t;
     var heightAtGoal = state.vy0 * state.t - 0.5 * GRAVITY * state.t * state.t;
-    var lateralAtGoal = state.vz0 * state.t + 0.5 * state.wind * state.t * state.t;
+    var lateralAtGoal = state.vz0 * state.t + WIND_COEFFICIENT * state.wind * state.t * state.t;
 
     var reachedDistance = forwardDist >= state.distance;
     var stillAirborne = heightAtGoal > 0;
@@ -376,9 +385,6 @@
       ctx.fillRect(0, i, W, 4);
     }
 
-    // hash marks center
-    ctx.fillStyle = "rgba(255,255,255,0.4)";
-    ctx.fillRect(W / 2 - 1, goalPlaneY, 2, groundY - goalPlaneY);
   }
 
   function drawGoalpost() {
@@ -447,7 +453,7 @@
       var forwardDist = state.forwardSpeed * state.t;
       var progress = Math.min(1, forwardDist / state.distance);
       var height = state.vy0 * state.t - 0.5 * GRAVITY * state.t * state.t;
-      var lateral = state.vz0 * state.t + 0.5 * state.wind * state.t * state.t;
+      var lateral = state.vz0 * state.t + WIND_COEFFICIENT * state.wind * state.t * state.t;
 
       var baseY = groundY - progress * (groundY - goalPlaneY);
       var screenY = baseY - height * 3.2;
