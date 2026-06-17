@@ -1,0 +1,61 @@
+/* ====================================================================
+   overwrite.css
+   Custom overrides for Jimmy Lathen's site.
+
+   This file is intentionally linked AFTER css/styles.css (the Bootstrap
+   "Clean Blog" theme stylesheet) in every page's <head>. Per the CSS
+   cascade, when two rules have equal specificity, the rule that is
+   read LAST by the browser wins. Loading this file last lets these
+   rules override the matching theme defaults without editing the
+   6,700+ line styles.css file directly.
+==================================================================== */
+
+/* Paragraph text: swap the theme's default body font for a more
+   personal serif typeface, and slightly soften the text color. */
+p {
+  font-family: "Lora", Georgia, serif;
+  color: #2b2b2b;
+}
+
+/* Links: replace Bootstrap's default link blue with a custom brand
+   accent color (a deep maroon) and a darker hover state. */
+a {
+  color: #8b1e3f;
+}
+a:hover {
+  color: #5e1429;
+}
+
+/* Site name in the navbar (#mainNav .navbar-brand already exists in
+   styles.css with font-weight: 800). At the top of the page the navbar
+   is transparent over the header photo, so the theme normally makes
+   the brand text white there (and dark once you scroll and the nav
+   becomes a solid white "is-fixed" bar). We keep both of those
+   defaults, and just add our own maroon hover/focus color on top, in
+   either state. */
+@media (min-width: 992px) {
+  #mainNav .navbar-brand {
+    color: #fff;
+    letter-spacing: 1px;
+  }
+}
+#mainNav .navbar-brand:hover,
+#mainNav .navbar-brand:focus,
+#mainNav.is-fixed .navbar-brand:hover,
+#mainNav.is-fixed .navbar-brand:focus {
+  color: #8b1e3f;
+}
+
+/* Page header titles (the big H1 on every page) get the same custom
+   serif font as the paragraph text, for a more cohesive look. */
+header.masthead .page-heading h1,
+header.masthead .site-heading h1 {
+  font-family: "Lora", Georgia, serif;
+  letter-spacing: 1px;
+}
+
+/* Footer: give it a soft background tint instead of the default
+   plain white, to visually separate it from the page content. */
+footer {
+  background-color: #f5f0eb;
+}
